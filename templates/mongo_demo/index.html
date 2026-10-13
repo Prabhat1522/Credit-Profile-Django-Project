@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}MongoDB Architecture &amp; Viva Demo{% endblock %}
+{% block page_heading %}MongoDB Architecture &amp; Viva Demonstration{% endblock %}
+{% block page_subtitle %}Live PyMongo operations, collection statistics, aggregation pipelines, and schema validation{% endblock %}
+
+{% block content %}
+<!--
+  templates/mongo_demo/index.html
+  Interactive Viva Showcase: Demonstrates real MongoDB Atlas operations.
+-->
+
+<!-- Top Banner -->
+<div class="bg-surface-900 text-white rounded-2xl p-6 mb-8 shadow-xl">
+  <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+          MongoDB Atlas Connected
+        </span>
+        <span class="text-xs text-slate-400">Database: <code class="text-white font-mono">credit_profile</code></span>
+      </div>
+      <h2 class="text-2xl font-bold text-white mt-2">NoSQL Database Design &amp; Aggregations</h2>
+      <p class="text-slate-300 text-sm mt-1 max-w-2xl">
+        This panel is designed for college evaluation and viva presentation. It executes live PyMongo queries directly against MongoDB Atlas, demonstrating schema validation, atomic sequence counters, and analytical pipelines.
+      </p>
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="{% url 'dashboard:index' %}" class="px-4 py-2 rounded-xl text-xs font-semibold bg-primary-600 hover:bg-primary-700 text-white transition-colors">
+        Back to Dashboard
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- 1. Live Collections Overview -->
+<div class="mb-8">
+  <h3 class="text-sm font-bold uppercase tracking-wider text-slate-500 mb-3">1. Database Collections &amp; Document Counts</h3>
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+    {% for c in collection_stats %}
+    <div class="bg-white rounded-xl border border-slate-200 p-4 shadow-sm text-center">
+      <span class="block text-xs font-mono font-medium text-slate-500 truncate">{{ c.name }}</span>
+      <span class="block text-2xl font-extrabold text-slate-900 mt-1">{{ c.count }}</span>
+      <span class="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 mt-1">
+        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Active
+      </span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- 2. Aggregations Showcase -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+  <!-- Orders Aggregation Panel -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div class="flex items-center justify-between mb-3">
+      <h4 class="font-bold text-slate-800 text-sm">Live Aggregation: Order Value by Status</h4>
+      <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded">$group + $sum</span>
+    </div>
+    <p class="text-xs text-slate-500 mb-4">
+      Sums order values and counts records partitioned by current fulfillment state:
+    </p>
+
+    <div class="space-y-2 mb-4">
+      {% for o in orders_agg %}
+      <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full
+            {% if o.status == 'completed' %}bg-emerald-500
+            {% elif o.status == 'pending' %}bg-amber-500
+            {% elif o.status == 'cancelled' %}bg-red-500
+            {% else %}bg-slate-400{% endif %}"></span>
+          <span class="font-semibold capitalize text-slate-700">{{ o.status }}</span>
+          <span class="text-slate-400">({{ o.count }} order{{ o.count|pluralize }})</span>
+        </div>
+        <span class="font-mono font-bold text-slate-900">&#8377;{{ o.total_value|floatformat:2 }}</span>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- MongoDB Pipeline Code Block -->
+    <div class="bg-slate-900 rounded-xl p-3 text-[11px] font-mono text-slate-300 overflow-x-auto">
+      <p class="text-slate-500 mb-1">// PyMongo pipeline executed:</p>
+      <code>[
+  {"$group": {"_id": "$status", "count": {"$sum": 1}, "total_value": {"$sum": "$total_amount"}}},
+  {"$sort": {"total_value": -1}}
+]</code>
+    </div>
+  </div>
+
+  <!-- Payments Aggregation Panel -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div class="flex items-center justify-between mb-3">
+      <h4 class="font-bold text-slate-800 text-sm">Live Aggregation: Invoices by Payment Status</h4>
+      <span class="text-xs font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded">$group</span>
+    </div>
+    <p class="text-xs text-slate-500 mb-4">
+      Aggregates amounts billed vs. amounts collected across invoice status buckets:
+    </p>
+
+    <div class="space-y-2 mb-4">
+      {% for p in payments_agg %}
+      <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 text-xs">
+        <div class="flex items-center gap-2">
+          <span class="w-2 h-2 rounded-full
+            {% if p.status == 'paid' %}bg-emerald-500
+            {% elif p.status == 'overdue' %}bg-red-500
+            {% elif p.status == 'partial' %}bg-amber-500
+            {% else %}bg-blue-500{% endif %}"></span>
+          <span class="font-semibold capitalize text-slate-700">{{ p.status }}</span>
+          <span class="text-slate-400">({{ p.count }} invoice{{ p.count|pluralize }})</span>
+        </div>
+        <div class="text-right">
+          <span class="font-mono font-bold text-slate-900 block">&#8377;{{ p.total_paid|floatformat:2 }} paid</span>
+          <span class="text-[10px] text-slate-400">of &#8377;{{ p.total_due|floatformat:2 }}</span>
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- MongoDB Pipeline Code Block -->
+    <div class="bg-slate-900 rounded-xl p-3 text-[11px] font-mono text-slate-300 overflow-x-auto">
+      <p class="text-slate-500 mb-1">// PyMongo pipeline executed:</p>
+      <code>[
+  {"$group": {"_id": "$status", "count": {"$sum": 1}, "total_due": {"$sum": "$amount_due"}, "total_paid": {"$sum": "$amount_paid"}}},
+  {"$sort": {"count": -1}}
+]</code>
+    </div>
+  </div>
+
+</div>
+
+<!-- 3. Atomic Counters & Indexes -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+
+  <!-- Atomic Sequence Counters -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div class="flex items-center justify-between mb-3">
+      <h4 class="font-bold text-slate-800 text-sm">Atomic Sequence Counters</h4>
+      <span class="text-xs font-mono bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded font-semibold">$inc concurrency safety</span>
+    </div>
+    <p class="text-xs text-slate-500 mb-4">
+      Guarantees human-readable sequential IDs (e.g. <code>CUST-001</code>, <code>ORD-001</code>, <code>PAY-001</code>) without race conditions using MongoDB's atomic <code>find_one_and_update</code>:
+    </p>
+
+    <div class="grid grid-cols-3 gap-3 mb-4">
+      {% for c in counters %}
+      <div class="p-3 rounded-xl bg-slate-50 border border-slate-200 text-center">
+        <span class="block text-[11px] font-mono text-slate-500">{{ c.name }}</span>
+        <span class="block text-xl font-bold text-slate-800 mt-1 font-mono">{{ c.seq }}</span>
+      </div>
+      {% empty %}
+      <p class="text-xs text-slate-400 col-span-3">No active counters.</p>
+      {% endfor %}
+    </div>
+
+    <div class="bg-slate-900 rounded-xl p-3 text-[11px] font-mono text-slate-300 overflow-x-auto">
+      <p class="text-slate-500 mb-1">// Atomic sequence generator in core/finance.py:</p>
+      <code>db.counters.find_one_and_update(
+  {"_id": counter_name},
+  {"$inc": {"seq": 1}},
+  upsert=True,
+  return_document=ReturnDocument.AFTER
+)</code>
+    </div>
+  </div>
+
+  <!-- Database Indexes & Integrity -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div class="flex items-center justify-between mb-3">
+      <h4 class="font-bold text-slate-800 text-sm">MongoDB Indexes &amp; Uniqueness Guarantees</h4>
+      <span class="text-xs font-mono bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded font-semibold">Atlas Performance</span>
+    </div>
+    <p class="text-xs text-slate-500 mb-4">
+      Indexes accelerate queries and enforce business constraints at the database engine level:
+    </p>
+
+    <div class="space-y-2 text-xs font-mono">
+      <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
+        <div>
+          <span class="font-bold text-slate-800">customers:</span>
+          <span class="text-slate-600">customer_id (unique), email (unique), is_active</span>
+        </div>
+        <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-sans font-medium">B-Tree</span>
+      </div>
+      <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
+        <div>
+          <span class="font-bold text-slate-800">orders:</span>
+          <span class="text-slate-600">order_id (unique), customer_id, status, order_date</span>
+        </div>
+        <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-sans font-medium">B-Tree</span>
+      </div>
+      <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
+        <div>
+          <span class="font-bold text-slate-800">payments:</span>
+          <span class="text-slate-600">payment_id (unique), customer_id, is_overdue, due_date</span>
+        </div>
+        <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-sans font-medium">B-Tree</span>
+      </div>
+      <div class="p-2.5 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-between">
+        <div>
+          <span class="font-bold text-slate-800">credit_profiles:</span>
+          <span class="text-slate-600">customer_id (unique)</span>
+        </div>
+        <span class="text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded font-sans font-medium">B-Tree</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- 4. Database-Level Schema Validation ($jsonSchema) -->
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+  <div class="flex items-center justify-between mb-3">
+    <div>
+      <h4 class="font-bold text-slate-800 text-base">Database-Level Schema Validation ($jsonSchema)</h4>
+      <p class="text-xs text-slate-500 mt-0.5">Enforces data types, required fields, and regex formats at MongoDB Atlas level</p>
+    </div>
+    <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-200">
+      collMod Validation Action: Error
+    </span>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+      <h5 class="font-bold text-slate-800 mb-2 font-mono">customers ($jsonSchema validator)</h5>
+      <ul class="space-y-1 text-slate-600 list-disc list-inside">
+        <li><code>customer_id</code>: string, regex <code>^CUST-[0-9]{3,}$</code> (Required)</li>
+        <li><code>full_name</code>: string, minLength 2, maxLength 100 (Required)</li>
+        <li><code>email</code>: string, regex RFC-5322 compliant (Required)</li>
+        <li><code>is_active</code>: bool (Required)</li>
+        <li><code>account_created_at</code>: date (Required)</li>
+        <li><code>kyc_verified</code>: bool</li>
+      </ul>
+    </div>
+
+    <div class="p-4 rounded-xl bg-slate-50 border border-slate-200">
+      <h5 class="font-bold text-slate-800 mb-2 font-mono">payments ($jsonSchema validator)</h5>
+      <ul class="space-y-1 text-slate-600 list-disc list-inside">
+        <li><code>payment_id</code>: string, regex <code>^PAY-[0-9]{3,}$</code> (Required)</li>
+        <li><code>order_id</code>: string, regex <code>^ORD-[0-9]{3,}$</code> (Required)</li>
+        <li><code>customer_id</code>: string, regex <code>^CUST-[0-9]{3,}$</code> (Required)</li>
+        <li><code>amount_due</code>: double / int, minimum 0 (Required)</li>
+        <li><code>amount_paid</code>: double / int, minimum 0 (Required)</li>
+        <li><code>status</code>: enum [paid, partial, pending, overdue] (Required)</li>
+        <li><code>is_overdue</code>: bool (Required)</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

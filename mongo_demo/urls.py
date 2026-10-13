@@ -1,9 +1,15 @@
-"""mongo_demo/urls.py — Placeholder for Phase 5."""
+"""
+mongo_demo/urls.py
+─────────────────────────────────────────────────────────────────────────────
+Routing for MongoDB Showcase and viva demo.
+─────────────────────────────────────────────────────────────────────────────
+"""
+
 from django.urls import path
 from . import views
 
 app_name = "mongo_demo"
 
 urlpatterns = [
-    path("", views.placeholder, name="index"),
+    path("", views.index, name="index"),
 ]
