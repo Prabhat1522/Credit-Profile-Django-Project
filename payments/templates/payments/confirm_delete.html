@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Payment {{ payment.payment_id }} — CreditIQ{% endblock %}
+{% block page_heading %}Delete Payment Record{% endblock %}
+{% block page_subtitle %}Confirm deletion of payment invoice {{ payment.payment_id }}{% endblock %}
+
+{% block content %}
+<div class="max-w-xl">
+  <div class="bg-white rounded-2xl border border-red-200 shadow-sm p-6 sm:p-8">
+    <div class="flex items-center gap-3 text-red-600 mb-4">
+      <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center">
+        <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+      <div>
+        <h3 class="text-base font-bold text-slate-900">Are you sure you want to delete this payment record?</h3>
+        <p class="text-xs text-slate-500">This payment document will be permanently removed from MongoDB.</p>
+      </div>
+    </div>
+
+    <div class="bg-slate-50 rounded-xl p-4 my-6 text-xs space-y-2 border border-slate-200">
+      <div class="flex justify-between">
+        <span class="text-slate-500">Payment ID:</span>
+        <span class="font-mono font-bold text-slate-800">{{ payment.payment_id }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-slate-500">Order ID:</span>
+        <span class="font-mono text-slate-800">{{ payment.order_id }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-slate-500">Customer ID:</span>
+        <span class="font-mono text-slate-800">{{ payment.customer_id }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-slate-500">Amount Due:</span>
+        <span class="font-mono font-bold text-slate-800">₹{{ payment.amount_due|floatformat:2 }}</span>
+      </div>
+      <div class="flex justify-between">
+        <span class="text-slate-500">Amount Paid:</span>
+        <span class="font-mono font-bold text-emerald-600">₹{{ payment.amount_paid|floatformat:2 }}</span>
+      </div>
+    </div>
+
+    <form method="POST" class="flex items-center justify-end gap-3">
+      {% csrf_token %}
+      <a href="{% url 'payments:detail' payment.payment_id %}"
+         class="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800">
+        Cancel
+      </a>
+      <button type="submit"
+              class="px-5 py-2.5 text-xs font-semibold text-white bg-red-600 rounded-xl hover:bg-red-700 transition shadow-sm">
+        Confirm Delete
+      </button>
+    </form>
+  </div>
+</div>
+{% endblock %}

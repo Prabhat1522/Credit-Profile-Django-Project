@@ -1,0 +1,251 @@
+{% extends "base.html" %}
+
+{% block title %}Payments — CreditIQ{% endblock %}
+{% block page_heading %}Payment History & Invoices{% endblock %}
+{% block page_subtitle %}Track customer dues, overdue payments, installments, and payment modes{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Top Action Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-primary-100 text-primary-800">
+        {{ total }} Payment Record{{ total|pluralize }}
+      </span>
+      {% if customer_id %}
+      <span class="text-xs text-slate-500">
+        Customer: <span class="font-mono font-semibold text-slate-800">{{ customer_id }}</span>
+      </span>
+      {% endif %}
+    </div>
+    <div class="flex items-center gap-3">
+      <a href="{% url 'payments:export_csv' %}"
+         class="inline-flex items-center gap-2 px-3.5 py-2 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded-xl hover:bg-slate-50 transition shadow-sm">
+        <svg class="w-4 h-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        Export CSV
+      </a>
+      <a href="{% url 'payments:create' %}"
+         class="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition shadow-sm">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+        </svg>
+        Record Invoice
+      </a>
+    </div>
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
+    <form method="GET" action="{% url 'payments:list' %}" class="flex flex-col md:flex-row gap-3">
+      <div class="flex-1 relative">
+        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+          <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+          </svg>
+        </div>
+        <input type="text" name="q" value="{{ q }}" placeholder="Search by Payment ID, Order ID, or Customer ID..."
+               class="w-full pl-9 pr-4 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-slate-50">
+      </div>
+
+      <div class="flex items-center gap-3">
+        <select name="status" class="py-2 px-3 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500">
+          <option value="all" {% if status == 'all' %}selected{% endif %}>All Status</option>
+          <option value="paid" {% if status == 'paid' %}selected{% endif %}>Paid</option>
+          <option value="pending" {% if status == 'pending' %}selected{% endif %}>Pending</option>
+          <option value="partial" {% if status == 'partial' %}selected{% endif %}>Partial</option>
+          <option value="overdue" {% if status == 'overdue' %}selected{% endif %}>Overdue</option>
+        </select>
+
+        <select name="overdue" class="py-2 px-3 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500">
+          <option value="">All Overdue States</option>
+          <option value="true" {% if is_overdue == 'true' %}selected{% endif %}>Overdue Only</option>
+        </select>
+
+        <select name="customer_id" class="py-2 px-3 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500 max-w-[160px]">
+          <option value="">All Customers</option>
+          {% for c in customers_dropdown %}
+          <option value="{{ c.customer_id }}" {% if customer_id == c.customer_id %}selected{% endif %}>
+            {{ c.customer_id }} — {{ c.full_name }}
+          </option>
+          {% endfor %}
+        </select>
+
+        <select name="sort" class="py-2 px-3 text-xs rounded-xl border border-slate-200 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-primary-500">
+          <option value="-due_date" {% if sort_by == '-due_date' %}selected{% endif %}>Due Date (Latest)</option>
+          <option value="due_date" {% if sort_by == 'due_date' %}selected{% endif %}>Due Date (Earliest)</option>
+          <option value="-amount_due" {% if sort_by == '-amount_due' %}selected{% endif %}>Amount (High to Low)</option>
+        </select>
+
+        <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-slate-800 rounded-xl hover:bg-slate-900 transition">
+          Filter
+        </button>
+
+        {% if q or status != 'all' or customer_id or is_overdue %}
+        <a href="{% url 'payments:list' %}" class="px-3 py-2 text-xs text-slate-500 hover:text-slate-800 transition">
+          Clear
+        </a>
+        {% endif %}
+      </div>
+    </form>
+  </div>
+
+  <!-- Payments Table -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
+            <th class="py-3 px-4">Payment ID</th>
+            <th class="py-3 px-4">Order & Customer</th>
+            <th class="py-3 px-4">Due Date</th>
+            <th class="py-3 px-4">Mode</th>
+            <th class="py-3 px-4 text-right">Amount Due</th>
+            <th class="py-3 px-4 text-right">Paid</th>
+            <th class="py-3 px-4 text-right">Outstanding</th>
+            <th class="py-3 px-4 text-center">Status</th>
+            <th class="py-3 px-4 text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for p in payments %}
+          <tr class="hover:bg-slate-50/75 transition">
+            <td class="py-3 px-4 font-mono font-semibold text-slate-800">
+              <a href="{% url 'payments:detail' p.payment_id %}" class="hover:text-primary-600">
+                {{ p.payment_id }}
+              </a>
+            </td>
+
+            <td class="py-3 px-4">
+              <div class="font-medium text-slate-800">
+                <a href="{% url 'customers:detail' p.customer_id %}" class="hover:text-primary-600">
+                  {{ p.customer_name }}
+                </a>
+              </div>
+              <div class="flex items-center gap-2 mt-0.5 font-mono text-[11px] text-slate-400">
+                <span>{{ p.customer_id }}</span>
+                &bull;
+                <a href="{% url 'orders:detail' p.order_id %}" class="hover:text-slate-600">{{ p.order_id }}</a>
+              </div>
+            </td>
+
+            <td class="py-3 px-4 text-slate-600">
+              {% if p.due_date %}
+                {{ p.due_date|date:"M d, Y" }}
+                {% if p.is_overdue %}
+                  <div class="text-[10px] text-red-600 font-semibold mt-0.5">{{ p.days_overdue }} days late</div>
+                {% endif %}
+              {% else %}
+                <span class="text-slate-400 italic">—</span>
+              {% endif %}
+            </td>
+
+            <td class="py-3 px-4 text-slate-600">
+              <span class="px-2 py-0.5 rounded-md text-[11px] bg-slate-100 text-slate-700 font-medium">
+                {{ p.payment_mode|default:"UPI" }}
+              </span>
+            </td>
+
+            <td class="py-3 px-4 text-right font-mono font-semibold text-slate-800">
+              ₹{{ p.amount_due|floatformat:2 }}
+            </td>
+
+            <td class="py-3 px-4 text-right font-mono text-emerald-600 font-medium">
+              ₹{{ p.amount_paid|floatformat:2 }}
+            </td>
+
+            <td class="py-3 px-4 text-right font-mono font-bold">
+              {% if p.outstanding > 0 %}
+                <span class="text-amber-600">₹{{ p.outstanding|floatformat:2 }}</span>
+              {% else %}
+                <span class="text-slate-400">₹0.00</span>
+              {% endif %}
+            </td>
+
+            <td class="py-3 px-4 text-center">
+              {% if p.status == 'paid' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-100 text-emerald-800">Paid</span>
+              {% elif p.status == 'overdue' or p.is_overdue %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-red-100 text-red-800">Overdue</span>
+              {% elif p.status == 'partial' %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-blue-100 text-blue-800">Partial</span>
+              {% else %}
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-100 text-amber-800">Pending</span>
+              {% endif %}
+            </td>
+
+            <td class="py-3 px-4 text-center">
+              <div class="inline-flex items-center gap-2">
+                {% if p.outstanding > 0 %}
+                <a href="{% url 'payments:record_pay' p.payment_id %}" title="Record payment"
+                   class="px-2 py-1 rounded-md text-[11px] font-semibold bg-primary-50 text-primary-700 hover:bg-primary-100 transition">
+                  Pay
+                </a>
+                {% endif %}
+                <a href="{% url 'payments:detail' p.payment_id %}" title="View details"
+                   class="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-slate-100 transition">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                </a>
+                <a href="{% url 'payments:delete' p.payment_id %}" title="Delete record"
+                   class="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-slate-100 transition">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </a>
+              </div>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="9" class="py-12 text-center text-slate-500">
+              <svg class="w-10 h-10 text-slate-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              <p class="font-medium">No payments found.</p>
+              <p class="text-xs text-slate-400 mt-1">Adjust filters or record a new payment invoice.</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600">
+      <div>
+        Page <span class="font-semibold">{{ page }}</span> of <span class="font-semibold">{{ total_pages }}</span>
+      </div>
+      <div class="flex items-center gap-1">
+        {% if has_prev %}
+        <a href="?page={{ page|add:'-1' }}&q={{ q }}&status={{ status }}&customer_id={{ customer_id }}&overdue={{ is_overdue }}&sort={{ sort_by }}"
+           class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50">
+          Previous
+        </a>
+        {% endif %}
+
+        {% for p in page_range %}
+        <a href="?page={{ p }}&q={{ q }}&status={{ status }}&customer_id={{ customer_id }}&overdue={{ is_overdue }}&sort={{ sort_by }}"
+           class="px-2.5 py-1 rounded-lg border {% if p == page %}bg-primary-600 text-white border-primary-600 font-semibold{% else %}bg-white border-slate-300 hover:bg-slate-50{% endif %}">
+          {{ p }}
+        </a>
+        {% endfor %}
+
+        {% if has_next %}
+        <a href="?page={{ page|add:'1' }}&q={{ q }}&status={{ status }}&customer_id={{ customer_id }}&overdue={{ is_overdue }}&sort={{ sort_by }}"
+           class="px-2.5 py-1 rounded-lg border border-slate-300 bg-white hover:bg-slate-50">
+          Next
+        </a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Payment {{ payment.payment_id }} — CreditIQ{% endblock %}
+{% block page_heading %}Payment Details{% endblock %}
+{% block page_subtitle %}Payment ID: {{ payment.payment_id }} &bull; Order ID: {{ payment.order_id }}{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Header Controls -->
+  <div class="flex items-center justify-between">
+    <a href="{% url 'payments:list' %}" class="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 transition">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+      </svg>
+      Back to Payments
+    </a>
+    <div class="flex items-center gap-2">
+      {% if payment.outstanding > 0 %}
+      <a href="{% url 'payments:record_pay' payment.payment_id %}"
+         class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-white bg-primary-600 rounded-xl hover:bg-primary-700 transition shadow-sm">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+        </svg>
+        Record Payment
+      </a>
+      {% endif %}
+      <a href="{% url 'payments:delete' payment.payment_id %}"
+         class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-red-700 bg-red-50 border border-red-200 rounded-xl hover:bg-red-100 transition">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+        </svg>
+        Delete
+      </a>
+    </div>
+  </div>
+
+  <!-- Main Breakdown Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Payment Status & Amounts Card -->
+    <div class="lg:col-span-2 space-y-6">
+
+      <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+        <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+          <div>
+            <span class="text-xs text-slate-400 uppercase font-semibold">Payment Status</span>
+            <div class="mt-1">
+              {% if payment.status == 'paid' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">Paid in Full</span>
+              {% elif payment.status == 'overdue' or payment.is_overdue %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-800">Overdue ({{ payment.days_overdue }} days)</span>
+              {% elif payment.status == 'partial' %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800">Partially Paid</span>
+              {% else %}
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800">Pending</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-slate-400">Payment Mode</span>
+            <p class="font-bold text-slate-800 text-sm mt-0.5">{{ payment.payment_mode|default:"UPI" }}</p>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-4 pt-6 text-center">
+          <div class="p-4 rounded-xl bg-slate-50 border border-slate-100">
+            <p class="text-xs text-slate-500 font-medium">Amount Due</p>
+            <p class="text-xl font-bold font-mono text-slate-800 mt-1">₹{{ payment.amount_due|floatformat:2 }}</p>
+          </div>
+
+          <div class="p-4 rounded-xl bg-emerald-50 border border-emerald-100">
+            <p class="text-xs text-emerald-700 font-medium">Amount Paid</p>
+            <p class="text-xl font-bold font-mono text-emerald-700 mt-1">₹{{ payment.amount_paid|floatformat:2 }}</p>
+          </div>
+
+          <div class="p-4 rounded-xl {% if payment.outstanding > 0 %}bg-amber-50 border-amber-100{% else %}bg-slate-50 border-slate-100{% endif %} border">
+            <p class="text-xs {% if payment.outstanding > 0 %}text-amber-700{% else %}text-slate-500{% endif %} font-medium">Outstanding</p>
+            <p class="text-xl font-bold font-mono {% if payment.outstanding > 0 %}text-amber-700{% else %}text-slate-400{% endif %} mt-1">
+              ₹{{ payment.outstanding|floatformat:2 }}
+            </p>
+          </div>
+        </div>
+
+        <!-- Dates & Overdue Breakdown -->
+        <dl class="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-slate-100 text-xs">
+          <div>
+            <dt class="text-slate-400">Due Date</dt>
+            <dd class="font-medium text-slate-800 mt-0.5">
+              {% if payment.due_date %}{{ payment.due_date|date:"F d, Y" }}{% else %}—{% endif %}
+            </dd>
+          </div>
+          <div>
+            <dt class="text-slate-400">Last Payment Date</dt>
+            <dd class="font-medium text-slate-800 mt-0.5">
+              {% if payment.payment_date %}{{ payment.payment_date|date:"F d, Y - H:i" }}{% else %}No payment recorded yet{% endif %}
+            </dd>
+          </div>
+        </dl>
+      </div>
+
+    </div>
+
+    <!-- Related Order and Customer Cards -->
+    <div class="space-y-6">
+
+      <!-- Customer Card -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">Customer Info</h3>
+        {% if payment.customer %}
+        <dl class="space-y-3 text-xs">
+          <div>
+            <dt class="text-slate-400">Name</dt>
+            <dd class="font-bold text-slate-800 text-sm mt-0.5">
+              <a href="{% url 'customers:detail' payment.customer.customer_id %}" class="hover:text-primary-600">
+                {{ payment.customer.full_name }}
+              </a>
+            </dd>
+          </div>
+          <div>
+            <dt class="text-slate-400">Customer ID</dt>
+            <dd class="font-mono text-slate-600 mt-0.5">{{ payment.customer.customer_id }}</dd>
+          </div>
+          <div>
+            <dt class="text-slate-400">Email</dt>
+            <dd class="text-slate-700 mt-0.5">{{ payment.customer.email }}</dd>
+          </div>
+        </dl>
+        {% else %}
+        <p class="text-xs text-slate-500">Customer ID: <span class="font-mono font-bold">{{ payment.customer_id }}</span></p>
+        {% endif %}
+      </div>
+
+      <!-- Order Card -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-800 border-b border-slate-100 pb-3 mb-4">Related Order</h3>
+        {% if payment.order %}
+        <dl class="space-y-3 text-xs">
+          <div>
+            <dt class="text-slate-400">Order ID</dt>
+            <dd class="font-mono font-bold text-slate-800 text-sm mt-0.5">
+              <a href="{% url 'orders:detail' payment.order.order_id %}" class="hover:text-primary-600">
+                {{ payment.order.order_id }}
+              </a>
+            </dd>
+          </div>
+          <div>
+            <dt class="text-slate-400">Order Status</dt>
+            <dd class="font-semibold text-slate-700 mt-0.5 capitalize">{{ payment.order.status }}</dd>
+          </div>
+          <div>
+            <dt class="text-slate-400">Order Total</dt>
+            <dd class="font-mono font-semibold text-slate-800 mt-0.5">₹{{ payment.order.total_amount|floatformat:2 }}</dd>
+          </div>
+        </dl>
+        {% else %}
+        <p class="text-xs text-slate-500">Order ID: <span class="font-mono font-bold">{{ payment.order_id }}</span></p>
+        {% endif %}
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}
