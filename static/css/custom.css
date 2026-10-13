@@ -1,0 +1,64 @@
+/*
+ * static/css/custom.css
+ * ─────────────────────────────────────────────────────────────────────────
+ * Minimal custom CSS — Tailwind handles 95% of styling.
+ * Only add things here that Tailwind cannot do easily.
+ * ─────────────────────────────────────────────────────────────────────────
+ */
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for sidebar */
+#sidebar nav::-webkit-scrollbar {
+  width: 4px;
+}
+#sidebar nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+#sidebar nav::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 2px;
+}
+
+/* Nav link active state transition */
+.nav-link {
+  transition: background-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Table rows hover effect */
+.data-table tbody tr {
+  transition: background-color 0.1s ease;
+}
+.data-table tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+/* Badge styles for risk categories */
+.badge-excellent   { background: #d1fae5; color: #065f46; }
+.badge-low-risk    { background: #dbeafe; color: #1e40af; }
+.badge-moderate    { background: #fef3c7; color: #92400e; }
+.badge-high-risk   { background: #fee2e2; color: #991b1b; }
+.badge-very-high   { background: #fce7f3; color: #9d174d; }
+
+/* Code blocks in MongoDB demo page */
+.mongo-query {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+/* Print styles for credit reports */
+@media print {
+  #sidebar, header, footer { display: none !important; }
+  .ml-64 { margin-left: 0 !important; }
+  .no-print { display: none !important; }
+}

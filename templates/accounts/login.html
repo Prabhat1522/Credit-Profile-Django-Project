@@ -1,0 +1,123 @@
+{% extends "base_auth.html" %}
+{% load static %}
+
+{% block title %}Sign In{% endblock %}
+{% block meta_description %}Admin login for the CreditIQ Credit Profile Management System{% endblock %}
+
+{% block content %}
+<!--
+  templates/accounts/login.html
+  PURPOSE: Admin login page. Uses Django auth (SQLite) — NOT MongoDB.
+  The form POSTs to accounts:login, which calls authenticate() and login().
+-->
+
+<div class="min-h-screen bg-gradient-to-br from-surface-900 via-primary-900 to-surface-800 flex items-center justify-center px-4">
+  <div class="w-full max-w-md">
+
+    <!-- Card -->
+    <div class="bg-white rounded-2xl shadow-2xl overflow-hidden animate-slide-in">
+
+      <!-- Card Header -->
+      <div class="bg-gradient-to-r from-primary-600 to-primary-700 px-8 py-8 text-center">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center mb-4 shadow-lg">
+          <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+          </svg>
+        </div>
+        <h1 class="text-2xl font-bold text-white">CreditIQ</h1>
+        <p class="text-primary-200 text-sm mt-1">Credit Profile Management System</p>
+      </div>
+
+      <!-- Form Body -->
+      <div class="px-8 py-8">
+        <h2 class="text-lg font-semibold text-slate-700 mb-1">Administrator Login</h2>
+        <p class="text-sm text-slate-500 mb-6">Sign in to access the credit profile dashboard.</p>
+
+        <!-- Error Messages -->
+        {% if messages %}
+        <div class="mb-5 space-y-2">
+          {% for message in messages %}
+          <div class="flex items-center gap-2 px-4 py-3 rounded-xl text-sm font-medium
+            {% if message.tags == 'error' %}bg-red-50 text-red-700 border border-red-200
+            {% else %}bg-blue-50 text-blue-700 border border-blue-200{% endif %}">
+            <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {{ message }}
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Login Form -->
+        <form method="post" action="{% url 'accounts:login' %}" class="space-y-5" id="login-form">
+          {% csrf_token %}
+
+          <!-- Username -->
+          <div>
+            <label for="username" class="block text-sm font-medium text-slate-700 mb-1.5">
+              Username
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </span>
+              <input id="username" name="username" type="text" required autocomplete="username"
+                     placeholder="Enter your username"
+                     class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm
+                            text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2
+                            focus:ring-primary-400 focus:border-primary-400 transition-all" />
+            </div>
+          </div>
+
+          <!-- Password -->
+          <div>
+            <label for="password" class="block text-sm font-medium text-slate-700 mb-1.5">
+              Password
+            </label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </span>
+              <input id="password" name="password" type="password" required autocomplete="current-password"
+                     placeholder="Enter your password"
+                     class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm
+                            text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2
+                            focus:ring-primary-400 focus:border-primary-400 transition-all" />
+            </div>
+          </div>
+
+          <!-- Submit -->
+          <button id="login-btn" type="submit"
+                  class="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 px-4
+                         rounded-xl text-sm transition-all duration-150 shadow-sm hover:shadow-md
+                         focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2
+                         flex items-center justify-center gap-2">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+            </svg>
+            Sign In
+          </button>
+        </form>
+
+        <!-- Academic Note -->
+        <div class="mt-6 pt-5 border-t border-slate-100 text-center">
+          <p class="text-xs text-slate-400">
+            Academic Project — Python Django + MongoDB Atlas<br/>
+            Credit Profile System for E-Commerce Customers
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
