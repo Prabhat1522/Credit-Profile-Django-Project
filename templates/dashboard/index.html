@@ -1,147 +1,433 @@
 {% extends "base.html" %}
+{% load static %}
 
-{% block title %}Dashboard{% endblock %}
-{% block page_heading %}System Dashboard{% endblock %}
-{% block page_subtitle %}Phase 1 — Setup & MongoDB Connection Status{% endblock %}
+{% block title %}Executive Analytics Dashboard{% endblock %}
+{% block page_heading %}Executive Analytics Dashboard{% endblock %}
+{% block page_subtitle %}Real-time portfolio intelligence, credit risk distribution & revenue analytics{% endblock %}
 
 {% block content %}
 <!--
   templates/dashboard/index.html
-  PURPOSE: Main dashboard page.
-  Phase 1: Shows setup status and MongoDB connection.
-  Phase 4: Will be extended with summary cards and Chart.js analytics.
+  Phase 4: Analytics Dashboard & Chart.js Visualizations
 -->
 
-<!-- ── Setup Status Header ───────────────────────────────────────────────── -->
-<div class="mb-8">
-  <div class="flex items-start justify-between">
+<!-- ── Top Bar: Welcome & Date Filter ──────────────────────────────────── -->
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
+  <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
     <div>
-      <h2 class="text-2xl font-bold text-slate-800">Welcome to CreditIQ</h2>
-      <p class="text-slate-500 mt-1 text-sm">
-        Credit Profile System for E-Commerce Customers &mdash; Phase 1 Setup Complete
+      <div class="flex items-center gap-2">
+        <h2 class="text-xl font-bold text-slate-900">Portfolio Performance & Credit Intelligence</h2>
+        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          Live Atlas Aggregations
+        </span>
+      </div>
+      <p class="text-slate-500 text-sm mt-1">
+        Comprehensive credit-risk evaluation and financial metrics across all registered e-commerce accounts.
       </p>
     </div>
-    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary-50 text-primary-700 border border-primary-200">
-      Phase 1 Active
+
+    <!-- Date Range Filter Form -->
+    <form method="get" action="{% url 'dashboard:index' %}" class="flex flex-wrap items-center gap-2 text-sm">
+      <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500">
+        <label for="start_date" class="text-xs font-medium text-slate-500">From:</label>
+        <input type="date" id="start_date" name="start_date" value="{{ filter.start_date }}"
+               class="bg-transparent text-xs text-slate-700 focus:outline-none" />
+      </div>
+      <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 focus-within:border-primary-500 focus-within:ring-1 focus-within:ring-primary-500">
+        <label for="end_date" class="text-xs font-medium text-slate-500">To:</label>
+        <input type="date" id="end_date" name="end_date" value="{{ filter.end_date }}"
+               class="bg-transparent text-xs text-slate-700 focus:outline-none" />
+      </div>
+
+      <button type="submit"
+              class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-primary-600 text-white hover:bg-primary-700 transition-colors shadow-sm">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+        </svg>
+        Apply
+      </button>
+
+      {% if filter.is_applied %}
+      <a href="{% url 'dashboard:index' %}"
+         class="inline-flex items-center gap-1 px-3 py-2 rounded-xl text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors"
+         title="Clear active date filters">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+        Reset
+      </a>
+      {% endif %}
+    </form>
+  </div>
+
+  {% if filter.is_applied %}
+  <div class="mt-3 pt-3 border-t border-slate-100 flex items-center gap-2 text-xs text-primary-700">
+    <svg class="w-4 h-4 text-primary-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+    <span>
+      Revenue metrics filtered from <strong>{{ filter.start_date|default:"Beginning" }}</strong> to <strong>{{ filter.end_date|default:"Present" }}</strong>.
     </span>
   </div>
+  {% endif %}
 </div>
 
-<!-- ── MongoDB Connection Status Card ───────────────────────────────────── -->
+<!-- ── Primary KPI Summary Cards ───────────────────────────────────────── -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+
+  <!-- Card 1: Total Customers -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:border-slate-300 transition-all">
+    <div class="flex items-center justify-between mb-3">
+      <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Customers</span>
+      <div class="w-9 h-9 rounded-xl bg-primary-50 text-primary-600 flex items-center justify-center">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </div>
+    </div>
+    <div class="flex items-baseline justify-between">
+      <div class="text-3xl font-extrabold text-slate-900">{{ customers.total_customers }}</div>
+      <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+        {{ customers.active_customers }} Active
+      </span>
+    </div>
+    <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+      <span>{{ customers.inactive_customers }} inactive</span>
+      <a href="{% url 'customers:list' %}" class="font-medium text-primary-600 hover:text-primary-700">View list &rarr;</a>
+    </div>
+  </div>
+
+  <!-- Card 2: Completed Revenue -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:border-slate-300 transition-all">
+    <div class="flex items-center justify-between mb-3">
+      <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Completed Revenue</span>
+      <div class="w-9 h-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+    </div>
+    <div class="flex items-baseline justify-between">
+      <div class="text-3xl font-extrabold text-slate-900">&#8377;{{ financials.completed_revenue|floatformat:2 }}</div>
+      <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700">
+        {{ financials.completed_order_count }} orders
+      </span>
+    </div>
+    <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+      <span>Excludes cancelled & returned</span>
+      <a href="{% url 'orders:list' %}" class="font-medium text-primary-600 hover:text-primary-700">All orders &rarr;</a>
+    </div>
+  </div>
+
+  <!-- Card 3: Total Outstanding Balance -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:border-slate-300 transition-all">
+    <div class="flex items-center justify-between mb-3">
+      <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Outstanding</span>
+      <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2zM10 8.5a.5.5 0 11-1 0 .5.5 0 011 0zm5 5a.5.5 0 11-1 0 .5.5 0 011 0z" />
+        </svg>
+      </div>
+    </div>
+    <div class="flex items-baseline justify-between">
+      <div class="text-3xl font-extrabold text-slate-900">&#8377;{{ financials.total_outstanding|floatformat:2 }}</div>
+      <span class="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-700">
+        {{ financials.total_invoices }} invoices
+      </span>
+    </div>
+    <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+      <span>&#8377;{{ financials.current_outstanding|floatformat:2 }} current term</span>
+      <a href="{% url 'payments:list' %}" class="font-medium text-primary-600 hover:text-primary-700">Invoices &rarr;</a>
+    </div>
+  </div>
+
+  <!-- Card 4: Overdue Balance & Alerts -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 hover:border-slate-300 transition-all">
+    <div class="flex items-center justify-between mb-3">
+      <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Overdue Balance</span>
+      <div class="w-9 h-9 rounded-xl bg-red-50 text-red-600 flex items-center justify-center">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      </div>
+    </div>
+    <div class="flex items-baseline justify-between">
+      <div class="text-3xl font-extrabold text-red-600">&#8377;{{ financials.total_overdue|floatformat:2 }}</div>
+      <span class="inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+        {{ alerts.total_active }} Alerts
+      </span>
+    </div>
+    <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+      <span>{{ financials.overdue_invoice_count }} overdue invoices</span>
+      <a href="{% url 'credit:alerts' %}" class="font-medium text-red-600 hover:text-red-700">Risk alerts &rarr;</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Secondary Distribution Cards: Profiles & Risk Categories ───────── -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
 
-  <!-- Connection Status -->
+  <!-- Profile Status Card -->
   <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-    <div class="flex items-center gap-3 mb-4">
-      <div class="w-10 h-10 rounded-xl flex items-center justify-center
-        {% if mongo_status.status == 'ok' %}bg-emerald-100{% else %}bg-red-100{% endif %}">
-        {% if mongo_status.status == 'ok' %}
-        <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        {% else %}
-        <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        {% endif %}
-      </div>
+    <div class="flex items-center justify-between mb-4">
       <div>
-        <h3 class="font-semibold text-slate-800 text-sm">MongoDB Atlas</h3>
-        <p class="text-xs text-slate-500">Database Connection</p>
+        <h3 class="font-bold text-slate-800 text-base">Profile History Classification</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Customer distribution based on transaction history and tenure</p>
       </div>
-      <span class="ml-auto px-2.5 py-1 rounded-full text-xs font-semibold
-        {% if mongo_status.status == 'ok' %}bg-emerald-100 text-emerald-700{% else %}bg-red-100 text-red-700{% endif %}">
-        {% if mongo_status.status == 'ok' %}Connected{% else %}Error{% endif %}
+      <a href="{% url 'credit:list' %}" class="text-xs font-medium text-primary-600 hover:text-primary-700">View All &rarr;</a>
+    </div>
+
+    <div class="grid grid-cols-3 gap-3">
+      <!-- Established -->
+      <div class="p-4 rounded-xl bg-indigo-50/60 border border-indigo-100 text-center">
+        <span class="block text-xs font-semibold text-indigo-700 uppercase tracking-wider mb-1">Established</span>
+        <span class="text-2xl font-bold text-indigo-900">{{ customers.profile_statuses.ESTABLISHED }}</span>
+        <span class="block text-[11px] text-indigo-600 mt-1">&ge;3 orders &amp; 30+ days</span>
+      </div>
+
+      <!-- Limited History -->
+      <div class="p-4 rounded-xl bg-purple-50/60 border border-purple-100 text-center">
+        <span class="block text-xs font-semibold text-purple-700 uppercase tracking-wider mb-1">Limited History</span>
+        <span class="text-2xl font-bold text-purple-900">{{ customers.profile_statuses.LIMITED_HISTORY }}</span>
+        <span class="block text-[11px] text-purple-600 mt-1">1&ndash;2 orders or &lt;30 days</span>
+      </div>
+
+      <!-- Insufficient Data -->
+      <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center">
+        <span class="block text-xs font-semibold text-slate-600 uppercase tracking-wider mb-1">Insufficient Data</span>
+        <span class="text-2xl font-bold text-slate-800">{{ customers.profile_statuses.INSUFFICIENT_DATA }}</span>
+        <span class="block text-[11px] text-slate-500 mt-1">0 purchases / records</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Risk Categories Breakdown Chips -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="font-bold text-slate-800 text-base">Credit Risk Categories</h3>
+        <p class="text-xs text-slate-500 mt-0.5">0&ndash;850 project credit score band partitions</p>
+      </div>
+      <a href="{% url 'credit:list' %}" class="text-xs font-medium text-primary-600 hover:text-primary-700">Score Engine &rarr;</a>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <!-- Excellent -->
+      <div class="p-3 rounded-xl border border-emerald-200 bg-emerald-50/50 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold text-emerald-800">Excellent</p>
+          <p class="text-[10px] text-emerald-600">750 &ndash; 850</p>
+        </div>
+        <span class="text-xl font-extrabold text-emerald-700">{{ customers.risk_categories.Excellent }}</span>
+      </div>
+
+      <!-- Good -->
+      <div class="p-3 rounded-xl border border-blue-200 bg-blue-50/50 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold text-blue-800">Good</p>
+          <p class="text-[10px] text-blue-600">650 &ndash; 749</p>
+        </div>
+        <span class="text-xl font-extrabold text-blue-700">{{ customers.risk_categories.Good }}</span>
+      </div>
+
+      <!-- Fair -->
+      <div class="p-3 rounded-xl border border-amber-200 bg-amber-50/50 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold text-amber-800">Fair</p>
+          <p class="text-[10px] text-amber-600">550 &ndash; 649</p>
+        </div>
+        <span class="text-xl font-extrabold text-amber-700">{{ customers.risk_categories.Fair }}</span>
+      </div>
+
+      <!-- Poor -->
+      <div class="p-3 rounded-xl border border-orange-200 bg-orange-50/50 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold text-orange-800">Poor</p>
+          <p class="text-[10px] text-orange-600">400 &ndash; 549</p>
+        </div>
+        <span class="text-xl font-extrabold text-orange-700">{{ customers.risk_categories.Poor }}</span>
+      </div>
+
+      <!-- Critical -->
+      <div class="p-3 rounded-xl border border-red-200 bg-red-50/50 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold text-red-800">Critical</p>
+          <p class="text-[10px] text-red-600">0 &ndash; 399</p>
+        </div>
+        <span class="text-xl font-extrabold text-red-700">{{ customers.risk_categories.Critical }}</span>
+      </div>
+
+      <!-- Insufficient Data -->
+      <div class="p-3 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
+        <div>
+          <p class="text-xs font-bold text-slate-700">No Data</p>
+          <p class="text-[10px] text-slate-500">Unscored</p>
+        </div>
+        <span class="text-xl font-extrabold text-slate-700">{{ customers.risk_categories.Insufficient_Data }}</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── Visualizations: Row 1 (Line Chart & Balance Bar Chart) ──────────── -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-8">
+
+  <!-- Chart 1: Monthly Completed-Order Revenue (Line Chart - 7 cols) -->
+  <div class="lg:col-span-7 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="font-bold text-slate-800 text-base">Monthly Completed Revenue Trend</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Historical revenue from completed customer orders</p>
+      </div>
+      <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-primary-50 text-primary-700 border border-primary-200">
+        &#8377;{{ charts_payload.revenue_timeline_chart.total|floatformat:2 }} Total
       </span>
     </div>
 
-    <div class="space-y-2 text-sm">
-      <div class="flex justify-between py-2 border-b border-slate-50">
-        <span class="text-slate-500">Status</span>
-        <span class="font-medium {% if mongo_status.status == 'ok' %}text-emerald-600{% else %}text-red-600{% endif %}">
-          {{ mongo_status.message }}
-        </span>
-      </div>
-      {% if mongo_status.db_name %}
-      <div class="flex justify-between py-2 border-b border-slate-50">
-        <span class="text-slate-500">Database</span>
-        <span class="font-medium text-slate-700 font-mono text-xs">{{ mongo_status.db_name }}</span>
-      </div>
-      {% endif %}
-      {% if mongo_status.detail %}
-      <div class="py-2">
-        <span class="text-slate-500 block mb-1">Error Detail</span>
-        <code class="text-xs bg-red-50 text-red-700 px-3 py-2 rounded-lg block whitespace-pre-wrap break-all">{{ mongo_status.detail }}</code>
-      </div>
-      {% endif %}
-    </div>
-
-    <a href="{% url 'dashboard:db_status' %}" target="_blank"
-       class="mt-4 inline-flex items-center gap-1.5 text-xs text-primary-600 hover:text-primary-700 font-medium">
-      View raw JSON status
-      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-      </svg>
-    </a>
-  </div>
-
-  <!-- Collections Status -->
-  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
-    <div class="flex items-center gap-3 mb-4">
-      <div class="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center">
-        <svg class="w-5 h-5 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+    <div class="relative w-full h-72">
+      <canvas id="revenueTimelineChart"></canvas>
+      <div id="revenueEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-50/80 rounded-xl text-center p-4">
+        <svg class="w-10 h-10 text-slate-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
         </svg>
+        <p class="text-sm font-medium text-slate-600">No completed orders found for this timeframe.</p>
+        <p class="text-xs text-slate-400 mt-0.5">Try widening the date filter or clearing inputs.</p>
       </div>
-      <div>
-        <h3 class="font-semibold text-slate-800 text-sm">MongoDB Collections</h3>
-        <p class="text-xs text-slate-500">Run setup_collections.py to create these</p>
-      </div>
-    </div>
-
-    <div class="space-y-2">
-      {% for col in expected_collections %}
-      <div class="flex items-center justify-between py-2 border-b border-slate-50 last:border-0">
-        <div class="flex items-center gap-2">
-          <span class="w-1.5 h-1.5 rounded-full
-            {% if col in mongo_status.collections %}bg-emerald-500{% else %}bg-slate-300{% endif %}"></span>
-          <span class="text-sm font-mono text-slate-700">{{ col }}</span>
-        </div>
-        <span class="text-xs
-          {% if col in mongo_status.collections %}text-emerald-600 font-medium{% else %}text-slate-400{% endif %}">
-          {% if col in mongo_status.collections %}Ready{% else %}Not yet created{% endif %}
-        </span>
-      </div>
-      {% endfor %}
     </div>
   </div>
+
+  <!-- Chart 2: Outstanding vs. Overdue Balance (Bar Chart - 5 cols) -->
+  <div class="lg:col-span-5 bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="font-bold text-slate-800 text-base">Outstanding vs. Overdue Debt</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Total open credit compared to delinquent dues</p>
+      </div>
+      <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+        Credit Exposure
+      </span>
+    </div>
+
+    <div class="relative w-full h-72">
+      <canvas id="balanceComparisonChart"></canvas>
+      <div id="balanceEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-50/80 rounded-xl text-center p-4">
+        <svg class="w-10 h-10 text-emerald-400 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <p class="text-sm font-medium text-slate-600">Zero Outstanding Debt</p>
+        <p class="text-xs text-slate-400 mt-0.5">All customer invoices are currently 100% settled.</p>
+      </div>
+    </div>
+  </div>
+
 </div>
 
-<!-- ── Phase Progress ────────────────────────────────────────────────────── -->
-<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-8">
-  <h3 class="font-semibold text-slate-800 mb-4">Development Progress</h3>
+<!-- ── Visualizations: Row 2 (Risk Doughnut, Status Bar, Alerts Bar) ──── -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+
+  <!-- Chart 3: Doughnut Chart - Risk Category -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="font-bold text-slate-800 text-sm">Customers by Risk Category</h3>
+        <p class="text-xs text-slate-500 mt-0.5">0&ndash;850 Score Distribution</p>
+      </div>
+      <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+        {{ charts_payload.risk_category_chart.total }} Profiles
+      </span>
+    </div>
+
+    <div class="relative w-full h-64">
+      <canvas id="riskCategoryChart"></canvas>
+      <div id="riskEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-50/80 rounded-xl text-center p-4">
+        <p class="text-xs text-slate-500">No scored profiles available.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 4: Bar Chart - Profile Status -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="font-bold text-slate-800 text-sm">Customer Profile Status</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Tenure &amp; Volume Eligibility</p>
+      </div>
+      <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700">
+        {{ charts_payload.profile_status_chart.total }} Profiles
+      </span>
+    </div>
+
+    <div class="relative w-full h-64">
+      <canvas id="profileStatusChart"></canvas>
+      <div id="statusEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-50/80 rounded-xl text-center p-4">
+        <p class="text-xs text-slate-500">No profile statuses found.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart 5: Bar Chart - Active Risk Alerts by Severity -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 flex flex-col justify-between">
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h3 class="font-bold text-slate-800 text-sm">Active Alerts by Severity</h3>
+        <p class="text-xs text-slate-500 mt-0.5">Critical, High, Medium, Low</p>
+      </div>
+      <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+        {{ charts_payload.alert_severity_chart.total }} Active
+      </span>
+    </div>
+
+    <div class="relative w-full h-64">
+      <canvas id="alertSeverityChart"></canvas>
+      <div id="alertEmptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-slate-50/80 rounded-xl text-center p-4">
+        <svg class="w-8 h-8 text-emerald-500 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <p class="text-xs font-medium text-slate-700">No Active Risk Alerts</p>
+        <p class="text-[11px] text-slate-400">All customer accounts are operating normally.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── System Development & viva Roadmap (Preserved for viva) ──────────── -->
+<div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 mb-6">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="font-semibold text-slate-800">Development Progress</h3>
+      <p class="text-xs text-slate-500">Project milestone completion status for viva evaluation</p>
+    </div>
+    <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700">
+      Phase 4 Completed
+    </span>
+  </div>
   <div class="grid grid-cols-1 sm:grid-cols-5 gap-3">
     {% for phase in phases %}
     <div class="rounded-xl border p-4 text-center
-      {% if phase.status == 'complete' %}bg-emerald-50 border-emerald-200
+      {% if phase.status == 'completed' %}bg-emerald-50 border-emerald-200
       {% elif phase.status == 'active' %}bg-primary-50 border-primary-200
       {% else %}bg-slate-50 border-slate-200{% endif %}">
       <div class="text-xs font-semibold uppercase tracking-wide mb-1
-        {% if phase.status == 'complete' %}text-emerald-600
+        {% if phase.status == 'completed' %}text-emerald-600
         {% elif phase.status == 'active' %}text-primary-600
         {% else %}text-slate-400{% endif %}">
         Phase {{ phase.number }}
       </div>
-      <div class="text-xs text-slate-600 font-medium">{{ phase.name }}</div>
+      <div class="text-xs text-slate-700 font-medium">{{ phase.name }}</div>
       <div class="mt-2">
-        <span class="inline-flex px-2 py-0.5 rounded-full text-xs
-          {% if phase.status == 'complete' %}bg-emerald-100 text-emerald-700
+        <span class="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold
+          {% if phase.status == 'completed' %}bg-emerald-100 text-emerald-700
           {% elif phase.status == 'active' %}bg-primary-100 text-primary-700
           {% else %}bg-slate-100 text-slate-500{% endif %}">
-          {% if phase.status == 'complete' %}✓ Done
+          {% if phase.status == 'completed' %}✓ Done
           {% elif phase.status == 'active' %}▶ Active
           {% else %}Pending{% endif %}
         </span>
@@ -151,34 +437,354 @@
   </div>
 </div>
 
-<!-- ── Setup Instructions ────────────────────────────────────────────────── -->
-{% if mongo_status.status != 'ok' %}
-<div class="bg-amber-50 border border-amber-200 rounded-2xl p-6">
-  <div class="flex items-start gap-3">
-    <svg class="w-5 h-5 text-amber-600 mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-    </svg>
-    <div>
-      <h4 class="font-semibold text-amber-800 text-sm mb-2">MongoDB not connected — Setup Required</h4>
-      <ol class="text-sm text-amber-700 space-y-1 list-decimal list-inside">
-        <li>Copy <code class="bg-amber-100 px-1 rounded">.env.example</code> to <code class="bg-amber-100 px-1 rounded">.env</code></li>
-        <li>Add your MongoDB Atlas connection string to <code class="bg-amber-100 px-1 rounded">MONGODB_URI</code></li>
-        <li>Add your IP to Atlas → Network Access → Add IP Address</li>
-        <li>Restart the Django server: <code class="bg-amber-100 px-1 rounded">python manage.py runserver</code></li>
-        <li>Run collection setup: <code class="bg-amber-100 px-1 rounded">python core/setup_collections.py</code></li>
-      </ol>
-    </div>
-  </div>
-</div>
-{% endif %}
+<!-- ── JSON Script Tag for Safe Chart.js Data Injection ────────────────── -->
+{{ charts_payload|json_script:"dashboard-charts-data" }}
 
 {% endblock %}
 
 {% block extra_scripts %}
 <script>
-  // Phase progress data is injected from the view
-  // This is a placeholder; Phase 4 will add Chart.js charts here
-  console.log("CreditIQ Dashboard — Phase 1 loaded.");
+  /**
+   * dashboard_charts.js
+   * Phase 4: Professional Chart.js Render Engine
+   * Receives pure JSON serialized data from Django json_script tag.
+   */
+  document.addEventListener("DOMContentLoaded", () => {
+    const dataElement = document.getElementById("dashboard-charts-data");
+    if (!dataElement) {
+      console.warn("No chart data element found.");
+      return;
+    }
+
+    let payload;
+    try {
+      payload = JSON.parse(dataElement.textContent);
+    } catch (err) {
+      console.error("Failed to parse chart payload JSON:", err);
+      return;
+    }
+
+    // Currency formatting helper
+    const formatINR = (val) => {
+      return "₹" + Number(val || 0).toLocaleString("en-IN", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    };
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 1. Line Chart: Monthly Completed Revenue
+    // ─────────────────────────────────────────────────────────────────────────
+    const revConfig = payload.revenue_timeline_chart || {};
+    const revCanvas = document.getElementById("revenueTimelineChart");
+    const revEmpty = document.getElementById("revenueEmptyState");
+
+    if (revCanvas) {
+      if (!revConfig.labels || revConfig.labels.length === 0 || revConfig.total === 0) {
+        if (revEmpty) revEmpty.classList.remove("hidden");
+      } else {
+        const ctx = revCanvas.getContext("2d");
+        const gradient = ctx.createLinearGradient(0, 0, 0, 280);
+        gradient.addColorStop(0, "rgba(99, 102, 241, 0.35)");
+        gradient.addColorStop(1, "rgba(99, 102, 241, 0.0)");
+
+        new Chart(revCanvas, {
+          type: "line",
+          data: {
+            labels: revConfig.labels,
+            datasets: [{
+              label: "Completed Revenue",
+              data: revConfig.data,
+              borderColor: "#4f46e5",
+              backgroundColor: gradient,
+              fill: true,
+              tension: 0.35,
+              borderWidth: 2.5,
+              pointBackgroundColor: "#4f46e5",
+              pointBorderColor: "#ffffff",
+              pointBorderWidth: 2,
+              pointRadius: 4,
+              pointHoverRadius: 6,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: "#0f172a",
+                titleFont: { size: 12, family: "Inter" },
+                bodyFont: { size: 12, family: "Inter" },
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: {
+                  label: (ctx) => {
+                    const idx = ctx.dataIndex;
+                    const orders = (revConfig.orders && revConfig.orders[idx]) || 0;
+                    return ` Revenue: ${formatINR(ctx.raw)} (${orders} order${orders === 1 ? '' : 's'})`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { font: { family: "Inter", size: 11 }, color: "#64748b" },
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: "#f1f5f9" },
+                ticks: {
+                  font: { family: "Inter", size: 11 },
+                  color: "#64748b",
+                  callback: (value) => "₹" + (value >= 1000 ? (value / 1000).toFixed(0) + "k" : value),
+                },
+              },
+            },
+          },
+        });
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 2. Bar Chart: Outstanding vs. Overdue Debt
+    // ─────────────────────────────────────────────────────────────────────────
+    const balConfig = payload.balance_chart || {};
+    const balCanvas = document.getElementById("balanceComparisonChart");
+    const balEmpty = document.getElementById("balanceEmptyState");
+
+    if (balCanvas) {
+      const totalDebt = (balConfig.data || []).reduce((a, b) => a + b, 0);
+      if (totalDebt === 0) {
+        if (balEmpty) balEmpty.classList.remove("hidden");
+      } else {
+        new Chart(balCanvas, {
+          type: "bar",
+          data: {
+            labels: balConfig.labels || ["Total Outstanding", "Overdue Balance"],
+            datasets: [{
+              label: "Amount",
+              data: balConfig.data || [0, 0],
+              backgroundColor: ["#f59e0b", "#ef4444"],
+              borderRadius: 8,
+              borderSkipped: false,
+              barThickness: 38,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: "#0f172a",
+                titleFont: { size: 12, family: "Inter" },
+                bodyFont: { size: 12, family: "Inter" },
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: {
+                  label: (ctx) => ` Balance: ${formatINR(ctx.raw)}`,
+                },
+              },
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { font: { family: "Inter", size: 11, weight: "bold" }, color: "#334155" },
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: "#f1f5f9" },
+                ticks: {
+                  font: { family: "Inter", size: 11 },
+                  color: "#64748b",
+                  callback: (value) => "₹" + (value >= 1000 ? (value / 1000).toFixed(0) + "k" : value),
+                },
+              },
+            },
+          },
+        });
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 3. Doughnut Chart: Risk Categories
+    // ─────────────────────────────────────────────────────────────────────────
+    const riskConfig = payload.risk_category_chart || {};
+    const riskCanvas = document.getElementById("riskCategoryChart");
+    const riskEmpty = document.getElementById("riskEmptyState");
+
+    if (riskCanvas) {
+      if (riskConfig.total === 0) {
+        if (riskEmpty) riskEmpty.classList.remove("hidden");
+      } else {
+        new Chart(riskCanvas, {
+          type: "doughnut",
+          data: {
+            labels: riskConfig.labels,
+            datasets: [{
+              data: riskConfig.data,
+              backgroundColor: riskConfig.colors,
+              borderWidth: 2,
+              borderColor: "#ffffff",
+              hoverOffset: 4,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: "68%",
+            plugins: {
+              legend: {
+                position: "bottom",
+                labels: {
+                  boxWidth: 10,
+                  boxHeight: 10,
+                  font: { size: 10, family: "Inter" },
+                  color: "#475569",
+                  padding: 8,
+                },
+              },
+              tooltip: {
+                backgroundColor: "#0f172a",
+                titleFont: { size: 12, family: "Inter" },
+                bodyFont: { size: 12, family: "Inter" },
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: {
+                  label: (ctx) => {
+                    const count = ctx.raw || 0;
+                    const pct = riskConfig.total > 0 ? ((count / riskConfig.total) * 100).toFixed(1) : 0;
+                    return ` ${ctx.label}: ${count} (${pct}%)`;
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 4. Bar Chart: Profile Status Breakdown
+    // ─────────────────────────────────────────────────────────────────────────
+    const statusConfig = payload.profile_status_chart || {};
+    const statusCanvas = document.getElementById("profileStatusChart");
+    const statusEmpty = document.getElementById("statusEmptyState");
+
+    if (statusCanvas) {
+      if (statusConfig.total === 0) {
+        if (statusEmpty) statusEmpty.classList.remove("hidden");
+      } else {
+        new Chart(statusCanvas, {
+          type: "bar",
+          data: {
+            labels: statusConfig.labels,
+            datasets: [{
+              label: "Customers",
+              data: statusConfig.data,
+              backgroundColor: statusConfig.colors,
+              borderRadius: 8,
+              borderSkipped: false,
+              barThickness: 28,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: "#0f172a",
+                titleFont: { size: 12, family: "Inter" },
+                bodyFont: { size: 12, family: "Inter" },
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: {
+                  label: (ctx) => ` Customers: ${ctx.raw}`,
+                },
+              },
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { font: { family: "Inter", size: 10 }, color: "#475569" },
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: "#f1f5f9" },
+                ticks: {
+                  stepSize: 2,
+                  font: { family: "Inter", size: 10 },
+                  color: "#64748b",
+                },
+              },
+            },
+          },
+        });
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // 5. Bar Chart: Active Alerts by Severity
+    // ─────────────────────────────────────────────────────────────────────────
+    const alertConfig = payload.alert_severity_chart || {};
+    const alertCanvas = document.getElementById("alertSeverityChart");
+    const alertEmpty = document.getElementById("alertEmptyState");
+
+    if (alertCanvas) {
+      if (alertConfig.total === 0) {
+        if (alertEmpty) alertEmpty.classList.remove("hidden");
+      } else {
+        new Chart(alertCanvas, {
+          type: "bar",
+          data: {
+            labels: alertConfig.labels,
+            datasets: [{
+              label: "Active Alerts",
+              data: alertConfig.data,
+              backgroundColor: alertConfig.colors,
+              borderRadius: 8,
+              borderSkipped: false,
+              barThickness: 28,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: "#0f172a",
+                titleFont: { size: 12, family: "Inter" },
+                bodyFont: { size: 12, family: "Inter" },
+                padding: 10,
+                cornerRadius: 8,
+                callbacks: {
+                  label: (ctx) => ` Active: ${ctx.raw} alert${ctx.raw === 1 ? '' : 's'}`,
+                },
+              },
+            },
+            scales: {
+              x: {
+                grid: { display: false },
+                ticks: { font: { family: "Inter", size: 10 }, color: "#475569" },
+              },
+              y: {
+                beginAtZero: true,
+                grid: { color: "#f1f5f9" },
+                ticks: {
+                  stepSize: 1,
+                  font: { family: "Inter", size: 10 },
+                  color: "#64748b",
+                },
+              },
+            },
+          },
+        });
+      }
+    }
+  });
 </script>
 {% endblock %}
