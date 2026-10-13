@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Risk Alerts — CreditIQ{% endblock %}
+{% block page_heading %}System Risk Alerts{% endblock %}
+{% block page_subtitle %}Automated detection of overdue delinquencies, high debt burdens, and critical risk drops{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+
+  <!-- Tabs & Navigation -->
+  <div class="flex items-center justify-between border-b border-slate-200 pb-4">
+    <div class="flex items-center gap-2">
+      <a href="?tab=active"
+         class="px-4 py-2 rounded-xl text-xs font-bold transition {% if status_tab == 'active' %}bg-red-600 text-white shadow-sm{% else %}bg-white text-slate-600 border border-slate-200 hover:bg-slate-50{% endif %}">
+        Active Alerts ({{ active_count }})
+      </a>
+      <a href="?tab=resolved"
+         class="px-4 py-2 rounded-xl text-xs font-bold transition {% if status_tab == 'resolved' %}bg-primary-600 text-white shadow-sm{% else %}bg-white text-slate-600 border border-slate-200 hover:bg-slate-50{% endif %}">
+        Resolved Alerts ({{ resolved_count }})
+      </a>
+    </div>
+
+    <a href="{% url 'credit:list' %}" class="text-xs text-slate-500 hover:text-slate-800">
+      &larr; Back to Profiles
+    </a>
+  </div>
+
+  <!-- Alerts Table -->
+  <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-left border-collapse text-xs">
+        <thead>
+          <tr class="bg-slate-50 border-b border-slate-200 text-slate-600 font-semibold uppercase tracking-wider">
+            <th class="py-3 px-4">Customer</th>
+            <th class="py-3 px-4">Alert Type</th>
+            <th class="py-3 px-4">Severity</th>
+            <th class="py-3 px-4">Reason / Details</th>
+            <th class="py-3 px-4 text-center">Score</th>
+            <th class="py-3 px-4">Triggered Date</th>
+            <th class="py-3 px-4 text-center">Action</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-100">
+          {% for a in alerts %}
+          <tr class="hover:bg-slate-50/75 transition">
+            <td class="py-3 px-4">
+              <a href="{% url 'credit:detail' a.customer_id %}" class="font-bold text-slate-800 hover:text-primary-600">
+                {{ a.customer_name }}
+              </a>
+              <div class="font-mono text-[11px] text-slate-400 mt-0.5">{{ a.customer_id }}</div>
+            </td>
+
+            <td class="py-3 px-4 font-mono font-semibold text-slate-800">
+              {{ a.alert_type }}
+            </td>
+
+            <td class="py-3 px-4">
+              <span class="px-2 py-0.5 rounded text-[10px] font-bold
+                {% if a.severity == 'CRITICAL' %}bg-red-100 text-red-700
+                {% else %}bg-amber-100 text-amber-700{% endif %}">
+                {{ a.severity }}
+              </span>
+            </td>
+
+            <td class="py-3 px-4 text-slate-700 max-w-xs leading-relaxed">
+              {{ a.reason }}
+              {% if a.resolution_notes %}
+              <div class="text-[11px] text-emerald-600 mt-1 italic">
+                Resolved: {{ a.resolution_notes }}
+              </div>
+              {% endif %}
+            </td>
+
+            <td class="py-3 px-4 text-center font-mono font-bold text-slate-800">
+              {{ a.credit_score|default:"—" }}
+            </td>
+
+            <td class="py-3 px-4 text-slate-500 text-[11px]">
+              {{ a.created_at|date:"M d, Y H:i" }}
+            </td>
+
+            <td class="py-3 px-4 text-center">
+              {% if not a.resolved %}
+              <form method="POST" action="{% url 'credit:alert_resolve' a.id %}" class="inline">
+                {% csrf_token %}
+                <button type="submit"
+                        onclick="return confirm('Mark this alert as resolved?');"
+                        class="px-2.5 py-1 text-[11px] font-semibold text-emerald-700 bg-emerald-50 rounded-lg border border-emerald-200 hover:bg-emerald-100 transition">
+                  Resolve
+                </button>
+              </form>
+              {% else %}
+              <span class="text-slate-400 text-[11px]">Resolved</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="7" class="py-12 text-center text-slate-400">
+              No {{ status_tab }} alerts currently recorded.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="px-4 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-600">
+      <div>Page <span class="font-semibold">{{ page }}</span> of <span class="font-semibold">{{ total_pages }}</span></div>
+      <div class="flex items-center gap-1">
+        {% if has_prev %}
+        <a href="?page={{ page|add:'-1' }}&tab={{ status_tab }}" class="px-2.5 py-1 rounded-lg border bg-white hover:bg-slate-50">Previous</a>
+        {% endif %}
+        {% for p in page_range %}
+        <a href="?page={{ p }}&tab={{ status_tab }}" class="px-2.5 py-1 rounded-lg border {% if p == page %}bg-primary-600 text-white font-semibold{% else %}bg-white border-slate-300 hover:bg-slate-50{% endif %}">{{ p }}</a>
+        {% endfor %}
+        {% if has_next %}
+        <a href="?page={{ page|add:'1' }}&tab={{ status_tab }}" class="px-2.5 py-1 rounded-lg border bg-white hover:bg-slate-50">Next</a>
+        {% endif %}
+      </div>
+    </div>
+    {% endif %}
+  </div>
+
+</div>
+{% endblock %}
